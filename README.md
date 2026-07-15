@@ -75,9 +75,6 @@ An AI-powered medical chatbot built using **Django** and **HUgging Face (LLM)** 
 
 ![Backend Screenshot](/outputshots/cmdshot.png)
 
-### 📝 User Registration Page
-
-![Register](/outputshots/register.png)
 
 ### 🔐 Login Page
 
@@ -87,9 +84,6 @@ An AI-powered medical chatbot built using **Django** and **HUgging Face (LLM)** 
 
 ![Chat Page](/outputshots/chatpage.png)
 
-### ⏳ Bot Typing State
-
-![Bot Typing](/outputshots/bottyping.png)
 
 ### 🧠 Prediction Output - 1
 
