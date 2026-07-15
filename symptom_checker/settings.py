@@ -24,7 +24,7 @@ SECRET_KEY = 'django-insecure-vyg-qai=g=e8l7c=9p9b4097_l2j1bnm36nml6=)&!t1b9+mfv
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'https://aidiseasebot.onrender.com']
 
 
 # Application definition
