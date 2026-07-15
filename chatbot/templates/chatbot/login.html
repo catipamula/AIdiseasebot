@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Disease Bot | Login</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+</head>
+<body class="auth-page auth-page--login">
+  <main class="auth-container">
+    <section class="auth-card">
+      <h2>Login🧠</h2>
+      {% if messages %}
+        <ul class="message-list">
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {{ form.as_p }}
+        <button type="submit">Log In</button>
+      </form>
+      <p class="links"><a href="{% url 'password_reset' %}">Forgot Password?</a></p>
+      <p class="links">Don't have an account? <a href="{% url 'register' %}">Sign Up</a></p>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,7 @@
+django
+channels
+channels_redis
+daphne
+openai==0.28
+python-dotenv
+huggingface_hub

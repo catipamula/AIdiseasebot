@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Symptom Checker</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/chat.css' %}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div>
+        <div class="brand">
+          <div class="brand-icon">🧠</div>
+          <div>
+            <h2>DiseaseBot</h2>
+            <p>AI symptom assistant</p>
+          </div>
+        </div>
+
+        <button class="new-chat-btn" id="newChatBtn" type="button">＋ New chat</button>
+
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Recent conversations</div>
+          <div class="search-box">
+            <input id="searchConversations" type="text" placeholder="Search chats" />
+          </div>
+          <div id="conversationList" class="conversation-list"></div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="profile-pill">
+          <div class="avatar">{{ user.username|slice:':1'|upper }}</div>
+          <div>
+            <strong>{{ user.username }}</strong>
+            <small>Signed in</small>
+          </div>
+        </div>
+        <form method="post" action="{% url 'logout' %}" class="logout-form">
+          {% csrf_token %}
+          <button type="submit" class="logout-btn">Logout</button>
+        </form>
+      </div>
+    </aside>
+
+    <div class="main-panel">
+      <header class="topbar">
+        <button class="menu-toggle" id="sidebarToggle" type="button">☰</button>
+        <div class="topbar-title">
+          <div class="title-badge">AI</div>
+          <div>
+            <h1>Symptom Checker</h1>
+            <p>Ask about symptoms and get tailored guidance</p>
+          </div>
+        </div>
+      </header>
+
+      <main class="chat-stage">
+        <div class="chat-panel">
+          <div id="messages" class="messages"></div>
+          <div id="typingIndicator" class="typing-indicator" hidden>
+            <span></span><span></span><span></span>
+          </div>
+          <form id="composer" class="composer">
+            <textarea id="messageInput" placeholder="Describe your symptoms or concerns..."></textarea>
+            <button id="sendButton" type="submit">Send</button>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const currentUser = '{{ user.username|escapejs }}';
+    const storageKey = 'diseasebot_conversations_' + currentUser;
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const chatSocket = new WebSocket(protocol + '://' + window.location.host + '/ws/chat/');
+
+    const state = {
+      conversations: [],
+      activeConversationId: null,
+      pending: false
+    };
+
+    const conversationList = document.getElementById('conversationList');
+    const messagesContainer = document.getElementById('messages');
+    const searchInput = document.getElementById('searchConversations');
+    const messageInput = document.getElementById('messageInput');
+    const composer = document.getElementById('composer');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const sendButton = document.getElementById('sendButton');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const newChatBtn = document.getElementById('newChatBtn');
+
+    function createConversation(title = 'New chat') {
+      return {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+        title: title,
+        updatedAt: Date.now(),
+        messages: []
+      };
+    }
+
+    function saveConversations() {
+      localStorage.setItem(storageKey, JSON.stringify(state.conversations));
+    }
+
+    function loadConversations() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(storageKey)) || [];
+        state.conversations = stored;
+      } catch (error) {
+        state.conversations = [];
+      }
+
+      if (!state.conversations.length) {
+        const conversation = createConversation();
+        state.conversations.push(conversation);
+        saveConversations();
+      }
+
+      state.activeConversationId = state.conversations[0].id;
+      render();
+    }
+
+    function getActiveConversation() {
+      return state.conversations.find((conversation) => conversation.id === state.activeConversationId) || state.conversations[0];
+    }
+
+    function setActiveConversation(id) {
+      state.activeConversationId = id;
+      render();
+    }
+
+    function updateConversationTimestamp(conversation) {
+      conversation.updatedAt = Date.now();
+    }
+
+    function appendMessage(sender, content, conversation = getActiveConversation()) {
+      if (!conversation) return;
+
+      const message = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+        sender: sender,
+        content: content
+      };
+
+      conversation.messages.push(message);
+      updateConversationTimestamp(conversation);
+
+      if (sender === 'user' && conversation.title === 'New chat') {
+        const trimmed = content.trim();
+        conversation.title = trimmed.length > 40 ? `${trimmed.slice(0, 37)}...` : trimmed;
+      }
+
+      saveConversations();
+      render();
+    }
+
+    function renderConversations() {
+      const query = searchInput.value.trim().toLowerCase();
+      const filtered = state.conversations
+        .filter((conversation) => {
+          const haystack = `${conversation.title} ${conversation.messages.map((message) => message.content).join(' ')}`.toLowerCase();
+          return haystack.includes(query);
+        })
+        .sort((a, b) => b.updatedAt - a.updatedAt);
+
+      conversationList.innerHTML = '';
+
+      if (!filtered.length) {
+        conversationList.innerHTML = '<div class="conversation-item"><strong>No matches</strong><small>Try a different search</small></div>';
+        return;
+      }
+
+      filtered.forEach((conversation) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = `conversation-item${conversation.id === state.activeConversationId ? ' active' : ''}`;
+        item.innerHTML = `<strong>${conversation.title}</strong><small>${conversation.messages.length ? conversation.messages[conversation.messages.length - 1].content.slice(0, 60) : 'New conversation'}</small>`;
+        item.addEventListener('click', () => {
+          setActiveConversation(conversation.id);
+          if (window.innerWidth <= 900) {
+            sidebar.classList.remove('open');
+          }
+        });
+        conversationList.appendChild(item);
+      });
+    }
+
+    function renderMessages() {
+      const conversation = getActiveConversation();
+      messagesContainer.innerHTML = '';
+
+      if (!conversation.messages.length) {
+        messagesContainer.innerHTML = '<div class="empty-state"><div><h3>Start a fresh conversation</h3><p>Describe your symptoms and I will help you with guidance.</p></div></div>';
+        return;
+      }
+
+      conversation.messages.forEach((message) => {
+        const row = document.createElement('div');
+        row.className = `message-row ${message.sender}`;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar-bubble';
+        avatar.textContent = message.sender === 'user' ? 'You' : 'AI';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = message.content;
+
+        row.appendChild(message.sender === 'user' ? bubble : avatar);
+        row.appendChild(message.sender === 'user' ? avatar : bubble);
+
+        messagesContainer.appendChild(row);
+      });
+    }
+
+    function scrollToBottom() {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function render() {
+      renderConversations();
+      renderMessages();
+      window.requestAnimationFrame(scrollToBottom);
+      if (state.pending) {
+        typingIndicator.style.display = 'flex';
+      } else {
+        typingIndicator.style.display = 'none';
+      }
+    }
+
+    function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message || state.pending) return;
+
+      const conversation = getActiveConversation();
+      appendMessage('user', message, conversation);
+      state.pending = true;
+      render();
+      sendButton.disabled = true;
+      messageInput.value = '';
+      messageInput.focus();
+      chatSocket.send(JSON.stringify({ message: message }));
+    }
+
+    composer.addEventListener('submit', (event) => {
+      event.preventDefault();
+      sendMessage();
+    });
+
+    messageInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    searchInput.addEventListener('input', renderConversations);
+
+    newChatBtn.addEventListener('click', () => {
+      const conversation = createConversation();
+      state.conversations.unshift(conversation);
+      state.activeConversationId = conversation.id;
+      saveConversations();
+      render();
+      if (window.innerWidth <= 900) {
+        sidebar.classList.remove('open');
+      }
+    });
+
+    sidebarToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    chatSocket.onopen = () => {
+      console.log('WebSocket connected');
+    };
+
+    chatSocket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      const conversation = getActiveConversation();
+      if (conversation) {
+        appendMessage('bot', data.message, conversation);
+      }
+      state.pending = false;
+      sendButton.disabled = false;
+      render();
+    };
+
+    chatSocket.onerror = (event) => {
+      console.error('WebSocket error:', event);
+      state.pending = false;
+      sendButton.disabled = false;
+      render();
+    };
+
+    chatSocket.onclose = () => {
+      console.warn('WebSocket closed');
+    };
+
+    loadConversations();
+    messageInput.focus();
+  </script>
+</body>
+</html>
