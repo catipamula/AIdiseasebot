@@ -19,19 +19,13 @@ An AI-powered medical chatbot built using **Django** and **HUgging Face (LLM)** 
 
 ## 🛠️ Tech Stack
 
-| Layer    | Technology            |
-| -------- | --------------------- |
-| Frontend | HTML, CSS, JavaScript |
-| Backend  | Django (Python)       |
-| AI Model | qwen (Hugging face )  |
-| Database | MySQL                 |
-| API      | OpenAI                |
-
----
-
-## 🏗️ System Architecture
-
-![Architecture Diagram](/outputshots/mermaid-diagram.png)
+| Layer    | Technology                                       |
+| -------- | -------------------------------------------------|
+| Frontend | HTML, CSS, JavaScript                            |
+| Backend  | Django (Python)                                  |
+| AI Model | meta-llama/Llama-3.1-8B-Instruct(Hugging face )  |
+| Database | MySQL                                            |
+  
 
 ---
 
@@ -51,7 +45,7 @@ An AI-powered medical chatbot built using **Django** and **HUgging Face (LLM)** 
 
 * Handles routing and business logic
 * Performs **prompt engineering**
-* Communicates with GPT-3.5 API
+* Communicates with meta-llama/Llama-3.1-8B-Instruct
 
 ### 4️⃣ AI Layer (Huggingface)
 
