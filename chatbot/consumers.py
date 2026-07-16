@@ -26,30 +26,38 @@ class ChatConsumer(AsyncWebsocketConsumer):
         user_input = data["message"]
 
         prompt = f"""
-A user reports the following symptoms or disease:
+A user reports the following symptoms:
 
 {user_input}
 
-Respond in the following format:
+Respond ONLY in the exact format below.
+
+Do NOT use Markdown.
+Do NOT use **bold**.
+Do NOT use * bullets.
+Do NOT use # headings.
+Do NOT add any introduction.
+Do NOT add any conclusion.
 
 Description:
-- Explain the disease in simple language.
+Explain the disease in simple language.
 
 Tablets:
-- Mention common medicines and their purpose.
-- Advise consulting a doctor before taking medicines.
+- Mention common medicines.
+- Mention what each medicine is commonly used for.
+- Add: "Consult a doctor before taking any medicine."
 
 Precautions:
-- List important precautions.
+- List precautions.
 
 Recommended Foods:
-- List foods that support recovery.
+- List foods.
 
 Foods to Avoid:
-- List foods that should be avoided.
+- List foods to avoid.
 
 Natural Home Remedies:
-- List home remedies if applicable.
+- List safe home remedies.
 """
 
         try:
@@ -57,7 +65,7 @@ Natural Home Remedies:
             response = await asyncio.wait_for(
                 asyncio.to_thread(
                     client.chat.completions.create,
-                    model="Qwen/Qwen2.5-7B-Instruct",
+                    model="meta-llama/Llama-3.1-8B-Instruct",
                     messages=[
                         {
                             "role": "system",
@@ -70,7 +78,7 @@ Always provide safe and educational information."""
                             "content": prompt
                         }
                     ],
-                    max_tokens=700,
+                    max_tokens=750,
                     temperature=0.3
                 ),
                 timeout=60
